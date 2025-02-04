@@ -9,6 +9,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import config from "@/lib/config";
 import ratelimit from "../ratelimit";
+import { workflowClient } from "@/lib/workflow";
 
 export const signInWithCredentials = async (
   params: Pick<AuthCredentials, "email" | "password">,
@@ -16,7 +17,7 @@ export const signInWithCredentials = async (
   const { email, password } = params;
 
   const ip = (await headers()).get("x-forwarded-for") || "127.0.0.1";
-  const {success} = await ratelimit.limit(ip);
+  const { success } = await ratelimit.limit(ip);
  
   try {
     const result = await signIn("credentials", {
@@ -65,7 +66,13 @@ export const signUp = async (params: AuthCredentials) => {
       universityCard,
     });
 
-   
+    await workflowClient.trigger({
+      url: `${config.env.prodApiEndpoint}/api/workflows/onboarding`,
+      body: {
+        email,
+        fullName,
+      },
+    });
 
     await signInWithCredentials({ email, password });
 
